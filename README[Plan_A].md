@@ -1,6 +1,7 @@
 Структура проекта "Алхимия"
 
-```/AlchemyByKirill/
+```
+/AlchemyByKirill/
 |
 |---  Platforms/              // (стандартная папка MAUI)
 |--- Resources/                // (стандартная папка MAUI для ресурсов)
