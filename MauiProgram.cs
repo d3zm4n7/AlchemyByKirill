@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿// In MauiProgram.cs
+using Microsoft.Extensions.Logging;
+using AlchemyByKirill.ViewModels; // Добавь using для ViewModel
+using AlchemyByKirill.Views;    // Добавь using для Views
 
 namespace AlchemyByKirill
 {
@@ -16,8 +19,15 @@ namespace AlchemyByKirill
                 });
 
 #if DEBUG
-    		builder.Logging.AddDebug();
+            builder.Logging.AddDebug();
 #endif
+            // --- Регистрация ViewModel и Страницы ---
+            builder.Services.AddSingleton<GameViewModel>(); // Регистрируем ViewModel как Singleton (один экземпляр на все приложение)
+            builder.Services.AddSingleton<GamePage>();      // Регистрируем страницу GamePage
+
+            // Позже добавим StartViewModel и StartPage
+            // builder.Services.AddSingleton<StartViewModel>();
+            // builder.Services.AddTransient<StartPage>(); // Страницы обычно Transient
 
             return builder.Build();
         }
