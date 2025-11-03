@@ -1,42 +1,32 @@
-﻿// In Services/GameLogicService.cs
-using AlchemyByKirill.Models; // Добавляем using для доступа к моделям
+﻿using AlchemyByKirill.Models;
 using Element = AlchemyByKirill.Models.Element;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AlchemyByKirill.Services
 {
     internal class GameLogicService
     {
-        // Список всех доступных в игре элементов (пока что жестко закодирован)
         private List<Element> _allElements = new List<Element>();
-        // Список всех рецептов (пока что жестко закодирован)
         private List<Recipe> _allRecipes = new List<Recipe>();
 
         public GameLogicService()
         {
-            LoadInitialData(); // Загружаем элементы и рецепты при создании сервиса
+            LoadInitialData();
         }
 
-        /// <summary>
-        /// Инициализация базовых элементов и рецептов (заглушка).
-        /// Позже это будет загружаться из JSON..md]
-        /// </summary>
         private void LoadInitialData()
         {
+            // ИЗМЕНИТЬ: Обновляем вызовы конструктора, добавляя Rect(X, Y, Width, Height)
             _allElements = new List<Element>
             {
-                // Обновляем конструкторы, добавляя 'new Rect(X, Y, Width, Height)'
-                // Размеры 75x75 соответствуют твоему XAML
+                // Задаем стартовые позиции для 4 базовых элементов
                 new Element(1, "Огонь", "fire.png", new Rect(50, 20, 75, 75)),
-                new Element(2, "Вода", "droplet.png", new Rect(130, 20, 75, 75)),
-                new Element(3, "Воздух", "wind_face.png", new Rect(50, 100, 75, 75)),
-                new Element(4, "Земля", "globe_showing_europe_africa.png", new Rect(130, 100, 75, 75)),
+                new Element(2, "Вода", "droplet.png", new Rect(150, 20, 75, 75)),
+                new Element(3, "Воздух", "wind_face.png", new Rect(50, 120, 75, 75)),
+                new Element(4, "Земля", "globe_showing_europe_africa.png", new Rect(150, 120, 75, 75)),
 
-                // Результаты пока можно оставить с позицией 0,0 (они не появляются сами)
+                // Результаты комбинаций (координаты не важны, но размер 75x75 нужен)
                 new Element(5, "Пар", "fog.png", new Rect(0, 0, 75, 75)),
                 new Element(6, "Лава", "volcano.png", new Rect(0, 0, 75, 75)),
                 new Element(7, "Камень", "rock.png", new Rect(0, 0, 75, 75)),
@@ -52,55 +42,40 @@ namespace AlchemyByKirill.Services
             };
         }
 
-        /// <summary>
-        /// Получить элемент по его ID.
-        /// </summary>
         public Element? GetElementById(int id)
         {
             return _allElements.FirstOrDefault(e => e.Id == id);
         }
 
-        /// <summary>
-        /// Получить все базовые элементы (Огонь, Вода, Воздух, Земля).
-        /// </summary>
         public List<Element> GetBaseElements()
         {
-            // Предположим, что базовые элементы имеют ID с 1 по 4
-            return _allElements.Where(e => e.Id >= 1 && e.Id <= 4).ToList();
+            // Возвращаем копии, чтобы у каждого элемента на поле были свои Bounds
+            var baseElements = _allElements.Where(e => e.Id >= 1 && e.Id <= 4).ToList();
+            return baseElements.Select(e => new Element(e.Id, e.Name, e.ImagePath, e.Bounds)).ToList();
         }
 
-
-        /// <summary>
-        /// Пытается скомбинировать два элемента.
-        /// Возвращает результирующий элемент, если комбинация успешна, иначе null.
-        ///
-        /// </summary>
         public Element? Combine(Element element1, Element element2)
         {
             if (element1 == null || element2 == null)
                 return null;
 
-            // Ищем подходящий рецепт
             Recipe? foundRecipe = _allRecipes.FirstOrDefault(r => r.Matches(element1, element2));
 
             if (foundRecipe != null)
             {
-                // Находим результирующий элемент по ID из рецепта
-                return GetElementById(foundRecipe.ResultElementId);
+                // Возвращаем *копию* результата, а не элемент из _allElements
+                var resultPrototype = GetElementById(foundRecipe.ResultElementId);
+                if (resultPrototype != null)
+                {
+                    return new Element(resultPrototype.Id, resultPrototype.Name, resultPrototype.ImagePath, resultPrototype.Bounds);
+                }
             }
 
             return null; // Рецепт не найден
         }
 
-        // --- Методы для очков (пока простые) ---
-
-        /// <summary>
-        /// Рассчитывает очки за открытие нового элемента.
-        /// </summary>
         public int CalculateScoreForDiscovery(Element discoveredElement)
         {
-            // Простая логика: +1 очко за каждый новый элемент
-            // Позже можно усложнить (зависимость от редкости и т.д..md])
             return 1;
         }
     }

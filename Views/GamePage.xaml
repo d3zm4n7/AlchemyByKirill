@@ -37,7 +37,7 @@
                                            Aspect="AspectFit"
                                            HorizontalOptions="Center" />
                                     <Label Text="{Binding Name}"
-                                           FontSize="16"
+                                           FontSize="10"
                                            HorizontalOptions="Center"
                                            HorizontalTextAlignment="Center"
                                            LineBreakMode="TailTruncation"/>
@@ -69,7 +69,7 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="models:Element">
                             <Grid Padding="5" WidthRequest="75" HeightRequest="75">
-                                <Border Stroke="LightGray" StrokeThickness="1"  BackgroundColor="LightGreen" Padding="2">
+                                <Border Stroke="LightGray" StrokeThickness="1" BackgroundColor="AliceBlue" Padding="2">
                                     <VerticalStackLayout Spacing="2">
                                         <Image Source="{Binding ImagePath}"
                                                HeightRequest="40"
@@ -77,7 +77,7 @@
                                                Aspect="AspectFit"
                                                HorizontalOptions="Center" />
                                         <Label Text="{Binding Name}"
-                                               FontSize="16"
+                                               FontSize="10"
                                                HorizontalOptions="Center"
                                                HorizontalTextAlignment="Center"
                                                LineBreakMode="TailTruncation"/>

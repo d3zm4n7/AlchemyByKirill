@@ -1,26 +1,34 @@
-﻿// Добавляем using
+﻿// ДОБАВИТЬ ЭТОТ USING
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AlchemyByKirill.Models;
 
-// 1. Делаем класс 'partial' и наследуем от 'ObservableObject'
+// ИЗМЕНИТЬ: класс теперь 'partial' и наследует от 'ObservableObject'
 public partial class Element : ObservableObject
 {
-    // 2. Добавляем свойство Bounds. 
-    //    Атрибут [ObservableProperty] автоматически создаст свойство 'Bounds'
+    // ДОБАВИТЬ: Свойство для хранения позиции и размера (X, Y, Width, Height)
     [ObservableProperty]
-    private Rect _bounds; // Прямоугольник (X, Y, Width, Height)
+    private Rect _bounds;
 
     public int Id { get; set; }
     public string Name { get; set; }
-    public string ImagePath { get; set; } // Путь к иконке, например "fire.svg"
+    public string ImagePath { get; set; }
 
-    // 3. Обновляем конструктор, чтобы он принимал 'Bounds'
+    // ДОБАВИТЬ: Новый конструктор, который принимает 'Bounds'
     public Element(int id, string name, string imagePath, Rect bounds)
     {
         Id = id;
         Name = name;
         ImagePath = imagePath;
-        Bounds = bounds; // Устанавливаем свойство
+        _bounds = bounds; // Назначаем приватное поле
+    }
+
+    // Этот старый конструктор можно удалить, но мы его оставим и обновим
+    public Element(int id, string name, string imagePath)
+    {
+        Id = id;
+        Name = name;
+        ImagePath = imagePath;
+        _bounds = new Rect(0, 0, 75, 75); // Задаем размер по умолчанию
     }
 }
