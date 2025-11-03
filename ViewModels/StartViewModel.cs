@@ -1,12 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input; // Добавь это
+using AlchemyByKirill.Views; // Убедись, что это добавлено
 
 namespace AlchemyByKirill.ViewModels
 {
-    internal class StartViewModel
+    public partial class StartViewModel : ObservableObject
     {
+        public StartViewModel()
+        {
+        }
+
+        // Команда для перехода на страницу игры
+        [RelayCommand]
+        async Task GoToGame()
+        {
+            await Shell.Current.GoToAsync(nameof(GamePage));
+        }
     }
 }

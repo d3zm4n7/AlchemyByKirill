@@ -7,7 +7,7 @@
              x:Class="AlchemyByKirill.Views.GamePage"
              Title="Alchemy Game">
 
-    <Grid RowDefinitions="*, Auto" Padding="10">
+    <Grid RowDefinitions="*, Auto, Auto" Padding="10">
 
         <Border Grid.Row="0" StrokeThickness="1" Stroke="Gray" Padding="5" Margin="0,0,0,10">
 
@@ -17,13 +17,17 @@
                 <AbsoluteLayout.GestureRecognizers>
                     <TapGestureRecognizer NumberOfTapsRequired="2"
                                            Command="{Binding SpawnBaseElementsCommand}" />
+
+                    <DropGestureRecognizer AllowDrop="True"
+                                         DropCommand="{Binding GameBoardDropCommand}" />
+
                 </AbsoluteLayout.GestureRecognizers>
 
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="models:Element">
-                        <ContentView WidthRequest="75" HeightRequest="75"
-                                     AbsoluteLayout.LayoutBounds="0.5, 0.5" 
-                                     AbsoluteLayout.LayoutFlags="PositionProportional">
+
+                        <ContentView AbsoluteLayout.LayoutFlags="None"
+                                     AbsoluteLayout.LayoutBounds="{Binding Bounds}">
 
                             <Border Stroke="Green" StrokeThickness="2" BackgroundColor="LightGreen" Padding="2">
                                 <VerticalStackLayout Spacing="2">
@@ -33,7 +37,7 @@
                                            Aspect="AspectFit"
                                            HorizontalOptions="Center" />
                                     <Label Text="{Binding Name}"
-                                           FontSize="10"
+                                           FontSize="16"
                                            HorizontalOptions="Center"
                                            HorizontalTextAlignment="Center"
                                            LineBreakMode="TailTruncation"/>
@@ -42,36 +46,16 @@
 
                             <ContentView.GestureRecognizers>
                                 <DragGestureRecognizer CanDrag="True"
-                                                       DragStartingCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=ElementDragStartingCommand}" />
+                                     DragStartingCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=ElementDragStartingCommand}" />
+
+                                <DropGestureRecognizer AllowDrop="True"
+                                                     DropCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=ElementDroppedOnCommand}"
+                                                     DropCommandParameter="{Binding .}" />
                             </ContentView.GestureRecognizers>
 
                         </ContentView>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
-
-                <Border x:Name="DropZone1" 
-                        BackgroundColor="LightCoral" 
-                        WidthRequest="100" HeightRequest="100"
-                        AbsoluteLayout.LayoutBounds="0.1, 0.8" 
-                        AbsoluteLayout.LayoutFlags="PositionProportional">
-
-                    <Border.GestureRecognizers>
-                        <DropGestureRecognizer AllowDrop="True" />
-                    </Border.GestureRecognizers>
-                    <Label Text="Слот 1" HorizontalOptions="Center" VerticalOptions="Center"/>
-                </Border>
-
-                <Border x:Name="DropZone2" 
-                        BackgroundColor="LightBlue" 
-                        WidthRequest="100" HeightRequest="100"
-                        AbsoluteLayout.LayoutBounds="0.9, 0.8" 
-                        AbsoluteLayout.LayoutFlags="PositionProportional">
-
-                    <Border.GestureRecognizers>
-                        <DropGestureRecognizer AllowDrop="True" />
-                    </Border.GestureRecognizers>
-                    <Label Text="Слот 2" HorizontalOptions="Center" VerticalOptions="Center"/>
-                </Border>
 
             </AbsoluteLayout>
         </Border>
@@ -85,7 +69,7 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="models:Element">
                             <Grid Padding="5" WidthRequest="75" HeightRequest="75">
-                                <Border Stroke="LightGray" StrokeThickness="1" BackgroundColor="AliceBlue" Padding="2">
+                                <Border Stroke="LightGray" StrokeThickness="1"  BackgroundColor="LightGreen" Padding="2">
                                     <VerticalStackLayout Spacing="2">
                                         <Image Source="{Binding ImagePath}"
                                                HeightRequest="40"
@@ -93,7 +77,7 @@
                                                Aspect="AspectFit"
                                                HorizontalOptions="Center" />
                                         <Label Text="{Binding Name}"
-                                               FontSize="10"
+                                               FontSize="16"
                                                HorizontalOptions="Center"
                                                HorizontalTextAlignment="Center"
                                                LineBreakMode="TailTruncation"/>
@@ -105,6 +89,17 @@
                 </CollectionView>
             </ScrollView>
         </Border>
+
+        <HorizontalStackLayout Grid.Row="2" Spacing="10" HorizontalOptions="Center" Padding="0,10,0,10">
+            <Button Text="Очистить экран" 
+                    Command="{Binding ClearBoardCommand}" 
+                    BackgroundColor="OrangeRed"
+                    TextColor="White"/>
+            <Button Text="Выйти в меню" 
+                    Command="{Binding ExitCommand}"
+                    BackgroundColor="Gray"
+                    TextColor="White"/>
+        </HorizontalStackLayout>
 
         <Label Grid.Row="0" Text="{Binding PlayerScore, StringFormat='Счет: {0}'}"
                FontSize="Large"

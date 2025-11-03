@@ -4,8 +4,10 @@ using AlchemyByKirill.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+// ДОБАВЬ ЭТИ USING:
+using System.Diagnostics;
 using System.Windows.Input;
-using Element = AlchemyByKirill.Models.Element; // Используем псевдоним
+using Element = AlchemyByKirill.Models.Element;
 
 namespace AlchemyByKirill.ViewModels
 {
@@ -14,192 +16,178 @@ namespace AlchemyByKirill.ViewModels
         private readonly GameLogicService _gameLogicService;
         private Player _currentPlayer;
 
-        // Инвентарь открытых элементов (для отображения внизу)
         public ObservableCollection<Element> DiscoveredElements { get; } = new ObservableCollection<Element>();
-
-        // Коллекция для элементов на игровом поле
         public ObservableCollection<Element> GameBoardElements { get; } = new ObservableCollection<Element>();
 
         [ObservableProperty]
         private int _playerScore;
 
-        // Команды
-        public ICommand CombineCommand { get; }
-        public ICommand SelectElementCommand { get; } // Для выбора касанием (если используется)
-        public ICommand ElementDragStartingCommand { get; }
-        public ICommand SpawnBaseElementsCommand { get; }
-
-        // Свойство для хранения перетаскиваемого элемента
+        // ДОБАВЬ: Свойство для хранения элемента, который мы тащим
         [ObservableProperty]
         private Element? _draggedElement;
 
-        // Элементы для комбинации (могут быть заменены логикой Drop зоны)
-        private Element? _element1ToCombine;
-        private Element? _element2ToCombine;
+        // ОСТАВЬ: Эти команды нужны
+        public ICommand ElementDragStartingCommand { get; }
+        public ICommand SpawnBaseElementsCommand { get; }
+
+
+        // ДОБАВЬ: Новые команды для сброса (Drop)
+        public ICommand GameBoardDropCommand { get; }
+        public ICommand ElementDroppedOnCommand { get; }
+
 
         public GameViewModel()
         {
             _gameLogicService = new GameLogicService();
             _currentPlayer = new Player();
-            LoadInitialGameState(); // Загружает DiscoveredElements
+            LoadInitialGameState();
 
-            CombineCommand = new AsyncRelayCommand(TryCombineElements, CanCombine);
-            SelectElementCommand = new RelayCommand<Element>(SelectElementForCombination); // Пока оставим
-            ElementDragStartingCommand = new RelayCommand<Element>(HandleDragStarting);
+            // ИЗМЕНИТЬ: Обновляем конструктор
+            ElementDragStartingCommand = new RelayCommand<Element>(ElementDragStarting);
             SpawnBaseElementsCommand = new RelayCommand(SpawnBaseElementsOnBoard);
+
+            // ДОБАВЬ: Инициализация новых команд
+            GameBoardDropCommand = new RelayCommand<DropEventArgs>(GameBoardDrop);
+            ElementDroppedOnCommand = new RelayCommand<Element>(ElementDroppedOn);
+
         }
 
-        /// <summary>
-        /// Загружает начальное состояние игры (базовые элементы в инвентарь).
-        /// </summary>
         private void LoadInitialGameState()
         {
             DiscoveredElements.Clear();
-            GameBoardElements.Clear(); // Очищаем и поле
+            GameBoardElements.Clear();
             _currentPlayer.Reset();
 
             var baseElements = _gameLogicService.GetBaseElements();
             foreach (var element in baseElements)
             {
-                // Базовые элементы сразу известны, добавляем в инвентарь
                 if (_currentPlayer.DiscoverElement(element.Id))
                 {
                     DiscoveredElements.Add(element);
                 }
             }
-            PlayerScore = _currentPlayer.Score; // Обновляем отображение счета
+            PlayerScore = _currentPlayer.Score;
         }
 
-        /// <summary>
-        /// Добавляет базовые элементы на игровое поле по команде (двойной тап).
-        /// </summary>
         private void SpawnBaseElementsOnBoard()
         {
             var baseElements = _gameLogicService.GetBaseElements();
-            bool added = false;
-            foreach (var element in baseElements)
+            foreach (var baseElement in baseElements)
             {
+                // Создаем *копию* элемента с уникальными Bounds
+                var newElementOnBoard = new Element(baseElement.Id, baseElement.Name, baseElement.ImagePath, baseElement.Bounds);
+
                 // Проверяем, есть ли уже такой элемент на поле
-                if (!GameBoardElements.Any(boardElement => boardElement.Id == element.Id))
+                if (!GameBoardElements.Any(boardElement => boardElement.Id == newElementOnBoard.Id))
                 {
-                    GameBoardElements.Add(element);
-                    added = true;
+                    GameBoardElements.Add(newElementOnBoard);
                 }
             }
-            if (added)
-            {
-                Console.WriteLine("Базовые элементы добавлены на поле.");
-            }
-            else
-            {
-                Console.WriteLine("Базовые элементы уже есть на поле.");
-            }
+            Debug.WriteLine("Базовые элементы добавлены на поле.");
         }
 
-        /// <summary>
-        /// Вызывается, когда пользователь начинает перетаскивать элемент с игрового поля.
-        /// </summary>
-        private void HandleDragStarting(Element? elementBeingDragged)
-        {
-            if (elementBeingDragged != null)
-            {
-                DraggedElement = elementBeingDragged; // Сохраняем перетаскиваемый элемент
-                Console.WriteLine($"Начато перетаскивание: {DraggedElement.Name}");
-            }
-        }
-
-        /// <summary>
-        /// Вызывается при касании элемента в инвентаре (если используется TapGestureRecognizer).
-        /// </summary>
-        private void SelectElementForCombination(Element? element)
+        // Этот метод вызывается, когда мы НАЧИНАЕМ тащить элемент
+        private void ElementDragStarting(Element? element)
         {
             if (element == null) return;
-
-            if (_element1ToCombine == null)
-            {
-                _element1ToCombine = element;
-                Console.WriteLine($"Выбран первый элемент: {element.Name}");
-            }
-            else if (_element2ToCombine == null && _element1ToCombine.Id != element.Id)
-            {
-                _element2ToCombine = element;
-                Console.WriteLine($"Выбран второй элемент: {element.Name}");
-                (CombineCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
-            }
-            else
-            {
-                _element1ToCombine = element;
-                _element2ToCombine = null;
-                Console.WriteLine($"Выбор сброшен. Снова выбран первый элемент: {element.Name}");
-                (CombineCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
-            }
+            DraggedElement = element;
+            Debug.WriteLine($"Dragging: {element.Name}");
         }
 
-        /// <summary>
-        /// Определяет, можно ли выполнить команду CombineCommand (нужны два элемента).
-        /// </summary>
-        private bool CanCombine()
+        // ДОБАВЬ: Метод для ПЕРЕМЕЩЕНИЯ (сброс на пустое поле)
+        private void GameBoardDrop(DropEventArgs? e)
         {
-            // Эта логика может измениться при использовании Drop зон
-            return _element1ToCombine != null && _element2ToCombine != null;
+            if (DraggedElement == null || e == null) return;
+
+            var position = e.GetPosition(null);
+            if (position.HasValue)
+            {
+                // Обновляем Bounds (X, Y) элемента. UI обновится, так как Element.Bounds - это [ObservableProperty]
+                DraggedElement.Bounds = new Rect(position.Value.X, position.Value.Y, DraggedElement.Bounds.Width, DraggedElement.Bounds.Height);
+                Debug.WriteLine($"Moved {DraggedElement.Name} to {DraggedElement.Bounds}");
+            }
+            DraggedElement = null; // Завершаем перетаскивание
         }
 
-        /// <summary>
-        /// Пытается скомбинировать _element1ToCombine и _element2ToCombine.
-        /// </summary>
-        private async Task TryCombineElements()
+        // ДОБАВЬ: Метод для КОМБИНАЦИИ (сброс на другой элемент)
+        private void ElementDroppedOn(Element? targetElement)
         {
-            if (_element1ToCombine != null && _element2ToCombine != null)
+            // Нельзя сбросить элемент сам на себя или если цель не определена
+            if (DraggedElement == null || targetElement == null || DraggedElement == targetElement)
             {
-                Console.WriteLine($"Попытка комбинации: {_element1ToCombine.Name} + {_element2ToCombine.Name}");
-                Element? result = _gameLogicService.Combine(_element1ToCombine, _element2ToCombine);
+                DraggedElement = null;
+                return;
+            }
 
-                if (result != null)
+            Debug.WriteLine($"Dropped {DraggedElement.Name} onto {targetElement.Name}");
+            TryCombineElements(DraggedElement, targetElement);
+            DraggedElement = null; // Завершаем перетаскивание
+        }
+
+        // УДАЛИ: Старые методы SelectElementForCombination и CanCombine
+        // private void SelectElementForCombination(Element? element) { ... }
+        // private bool CanCombine() { ... }
+
+        // ИЗМЕНИТЬ: Метод TryCombineElements теперь принимает 2 элемента
+        private async void TryCombineElements(Element element1, Element element2)
+        {
+            Debug.WriteLine($"Попытка комбинации: {element1.Name} + {element2.Name}");
+            Element? result = _gameLogicService.Combine(element1, element2);
+
+            if (result != null)
+            {
+                Debug.WriteLine($"Успех! Получен: {result.Name}");
+
+                // Удаляем старые элементы с поля
+                GameBoardElements.Remove(element1);
+                GameBoardElements.Remove(element2);
+
+                // Создаем новый элемент на месте 'цели' (element2)
+                var newElement = new Element(result.Id, result.Name, result.ImagePath, element2.Bounds);
+                GameBoardElements.Add(newElement);
+
+                bool isNew = _currentPlayer.DiscoverElement(result.Id);
+
+                if (isNew)
                 {
-                    Console.WriteLine($"Успех! Получен: {result.Name}");
-                    bool isNew = _currentPlayer.DiscoverElement(result.Id);
+                    Debug.WriteLine("Это новый элемент!");
+                    if (!DiscoveredElements.Any(e => e.Id == result.Id))
+                        DiscoveredElements.Add(result);
 
-                    if (isNew)
-                    {
-                        Console.WriteLine("Это новый элемент!");
-                        // Добавляем и в инвентарь, и на поле? Или только в инвентарь?
-                        // Пока добавляем только в инвентарь
-                        if (!DiscoveredElements.Any(e => e.Id == result.Id))
-                            DiscoveredElements.Add(result);
-                        // Можно добавить и на поле, если нужно:
-                        // if (!GameBoardElements.Any(e => e.Id == result.Id))
-                        //     GameBoardElements.Add(result);
+                    int scoreGained = _gameLogicService.CalculateScoreForDiscovery(result);
+                    _currentPlayer.AddScore(scoreGained);
+                    PlayerScore = _currentPlayer.Score;
 
-                        int scoreGained = _gameLogicService.CalculateScoreForDiscovery(result);
-                        _currentPlayer.AddScore(scoreGained);
-                        PlayerScore = _currentPlayer.Score;
-
-                        await Shell.Current.DisplayAlert("Новый элемент!", $"Вы открыли: {result.Name}!", "OK");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Элемент уже был открыт.");
-                        await Shell.Current.DisplayAlert("Уже открыто", $"Элемент {result.Name} уже есть в вашей коллекции.", "OK");
-                    }
-                    // TODO: Удалить исходные элементы с поля?
+                    await Shell.Current.DisplayAlert("Новый элемент!", $"Вы открыли: {result.Name}!", "OK");
                 }
                 else
                 {
-                    Console.WriteLine("Неудачная комбинация.");
-                    await Shell.Current.DisplayAlert("Неудача", "Эти элементы не комбинируются.", "OK");
+                    Debug.WriteLine("Элемент уже был открыт.");
                 }
-
-                // Сбрасываем выбранные элементы после попытки
-                _element1ToCombine = null;
-                _element2ToCombine = null;
-                Console.WriteLine("Выбор (касанием) сброшен после комбинации.");
-                (CombineCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
             }
             else
             {
-                Console.WriteLine("Нужно выбрать два элемента для комбинации.");
+                Debug.WriteLine("Неудачная комбинация.");
+                // Можно раскомментировать, если нужно сообщение об ошибке
+                // await Shell.Current.DisplayAlert("Неудача", "Эти элементы не комбинируются.", "OK");
             }
         }
-        // Метод HandleDrop будет добавлен позже
+
+        // ... (Твои методы ClearBoard и Exit остаются без изменений) ...
+        [RelayCommand]
+        void ClearBoard()
+        {
+            GameBoardElements.Clear();
+            // Можно также очистить слоты, если они у тебя есть
+            // DropZone1Element = null;
+            // DropZone2Element = null;
+        }
+
+        [RelayCommand]
+        async Task Exit()
+        {
+            // Возвращаемся на предыдущую страницу (на StartPage)
+            await Shell.Current.GoToAsync("..");
+        }
     }
 }
