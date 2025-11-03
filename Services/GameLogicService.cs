@@ -1,4 +1,5 @@
-﻿using AlchemyByKirill.Models;
+﻿// In Services/GameLogicService.cs
+using AlchemyByKirill.Models;
 using Element = AlchemyByKirill.Models.Element;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,6 +32,10 @@ namespace AlchemyByKirill.Services
                 new Element(6, "Лава", "volcano.png", new Rect(0, 0, 75, 75)),
                 new Element(7, "Камень", "rock.png", new Rect(0, 0, 75, 75)),
                 new Element(8, "Растение", "seedling.png", new Rect(0, 0, 75, 75)),
+                
+                // --- ДОБАВЛЕНО ---
+                // Используем иконку 'fog.png' для пыли, так как у нас нет отдельной иконки
+                new Element(9, "Пыль", "fog.png", new Rect(0, 0, 75, 75)),
             };
 
             _allRecipes = new List<Recipe>
@@ -38,7 +43,10 @@ namespace AlchemyByKirill.Services
                 new Recipe(1, 2, 5), // Огонь + Вода = Пар
                 new Recipe(1, 4, 6), // Огонь + Земля = Лава
                 new Recipe(6, 2, 7), // Лава + Вода = Камень
-                new Recipe(2, 4, 8)  // Вода + Земля = Растение
+                new Recipe(2, 4, 8), // Вода + Земля = Растение
+                
+                // --- ДОБАВЛЕНО ---
+                new Recipe(3, 4, 9)  // Воздух + Земля = Пыль
             };
         }
 

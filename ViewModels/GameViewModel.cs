@@ -1,15 +1,13 @@
 ﻿// In ViewModels/GameViewModel.cs
 
-// --- УБЕДИСЬ, ЧТО ЭТИ USING ДОБАВЛЕНЫ ---
 using AlchemyByKirill.Models;
 using AlchemyByKirill.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input; // <--- НУЖЕН ДЛЯ [RelayCommand]
+using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Windows.Input; // <--- НУЖЕН ДЛЯ ICommand
+using System.Windows.Input;
 using Element = AlchemyByKirill.Models.Element;
-// -----------------------------------------
 
 namespace AlchemyByKirill.ViewModels
 {
@@ -17,6 +15,7 @@ namespace AlchemyByKirill.ViewModels
     {
         private readonly GameLogicService _gameLogicService;
         private Player _currentPlayer;
+        private Random _random = new Random();
 
         public ObservableCollection<Element> DiscoveredElements { get; } = new ObservableCollection<Element>();
         public ObservableCollection<Element> GameBoardElements { get; } = new ObservableCollection<Element>();
@@ -29,11 +28,10 @@ namespace AlchemyByKirill.ViewModels
 
         // Команды, которые будут вызваны из XAML
         public ICommand ElementDragStartingCommand { get; }
-        public ICommand SpawnBaseElementsCommand { get; }
         public ICommand GameBoardDropCommand { get; }
-        public ICommand ElementDroppedOnCommand { get; }
-
-
+        // public ICommand ElementDroppedOnCommand { get; } // --- УДАЛЕНО ---
+        public ICommand SpawnElementFromInventoryCommand { get; }
+        public ICommand DuplicateElementCommand { get; }
 
         public GameViewModel()
         {
@@ -43,11 +41,10 @@ namespace AlchemyByKirill.ViewModels
 
             // Инициализация всех команд
             ElementDragStartingCommand = new RelayCommand<Element>(ElementDragStarting);
-            SpawnBaseElementsCommand = new RelayCommand(SpawnBaseElementsOnBoard);
-            // 'DropEventArgs' теперь должен найтись из-за 'using Microsoft.Maui.Controls;' (он обычно глобальный)
-            GameBoardDropCommand = new RelayCommand<DropEventArgs>(GameBoardDrop);
-            ElementDroppedOnCommand = new RelayCommand<Element>(ElementDroppedOn);
-
+            GameBoardDropCommand = new RelayCommand<DropEventArgs>(GameBoardDrop); // Этот метод теперь главный
+            // ElementDroppedOnCommand = new RelayCommand<Element>(ElementDroppedOn); // --- УДАЛЕНО ---
+            SpawnElementFromInventoryCommand = new RelayCommand<Element>(SpawnElementFromInventory);
+            DuplicateElementCommand = new RelayCommand<Element>(DuplicateElement);
         }
 
         private void LoadInitialGameState()
@@ -67,20 +64,6 @@ namespace AlchemyByKirill.ViewModels
             PlayerScore = _currentPlayer.Score;
         }
 
-        private void SpawnBaseElementsOnBoard()
-        {
-            var baseElements = _gameLogicService.GetBaseElements();
-            foreach (var baseElement in baseElements)
-            {
-                // Проверяем, есть ли уже такой ID на поле
-                if (!GameBoardElements.Any(boardElement => boardElement.Id == baseElement.Id))
-                {
-                    GameBoardElements.Add(baseElement);
-                }
-            }
-            Debug.WriteLine("Базовые элементы добавлены на поле.");
-        }
-
         // Вызывается, когда мы НАЧИНАЕМ тащить элемент
         private void ElementDragStarting(Element? element)
         {
@@ -89,35 +72,79 @@ namespace AlchemyByKirill.ViewModels
             Debug.WriteLine($"Dragging: {element.Name}");
         }
 
-        // Вызывается, когда мы сбрасываем элемент на ПУСТОЕ ПОЛЕ (для перемещения)
+        // --- ЭТОТ МЕТОД ТЕПЕРЬ ОБРАБАТЫВАЕТ И ПЕРЕМЕЩЕНИЕ, И КОМБИНАЦИЮ ---
         private void GameBoardDrop(DropEventArgs? e)
         {
             if (DraggedElement == null || e == null) return;
 
-            var position = e.GetPosition(null);
-            if (position.HasValue)
-            {
-                // Обновляем Bounds (X, Y) элемента.
-                DraggedElement.Bounds = new Rect(position.Value.X, position.Value.Y, DraggedElement.Bounds.Width, DraggedElement.Bounds.Height);
-                Debug.WriteLine($"Moved {DraggedElement.Name} to {DraggedElement.Bounds}");
-            }
-            DraggedElement = null; // Завершаем перетаскивание
-        }
-
-        // Вызывается, когда мы сбрасываем элемент НА ДРУГОЙ ЭЛЕМЕНТ (для комбинации)
-        private void ElementDroppedOn(Element? targetElement)
-        {
-            // Нельзя сбросить элемент сам на себя
-            if (DraggedElement == null || targetElement == null || DraggedElement == targetElement)
+            var position = e.GetPosition(null); // Это 'Point?'
+            if (!position.HasValue)
             {
                 DraggedElement = null;
                 return;
             }
 
-            Debug.WriteLine($"Dropped {DraggedElement.Name} onto {targetElement.Name}");
-            TryCombineElements(DraggedElement, targetElement);
-            DraggedElement = null; // Завершаем перетаскивание
+            // 1. Проверяем, попали ли мы на другой элемент
+            // Ищем элемент, который не является перетаскиваемым, но его Bounds (рамки) содержит точку броска
+            var targetElement = GameBoardElements.FirstOrDefault(el =>
+                el != DraggedElement &&
+                el.Bounds.Contains(position.Value));
+
+            if (targetElement != null)
+            {
+                // 2. ЕСЛИ ПОПАЛИ: Это комбинация
+                Debug.WriteLine($"Dropped {DraggedElement.Name} onto {targetElement.Name}");
+                TryCombineElements(DraggedElement, targetElement);
+            }
+            else
+            {
+                // 3. ЕСЛИ НЕ ПОПАЛИ: Это перемещение
+                // Центрируем элемент по курсору (ширина/высота 75, значит смещение 37.5)
+                double x = Math.Max(0, position.Value.X - 37.5);
+                double y = Math.Max(0, position.Value.Y - 37.5);
+
+                DraggedElement.Bounds = new Rect(x, y, DraggedElement.Bounds.Width, DraggedElement.Bounds.Height);
+                Debug.WriteLine($"Moved {DraggedElement.Name} to {DraggedElement.Bounds}");
+            }
+
+            DraggedElement = null; // Завершаем перетаскивание в любом случае
         }
+
+
+        // --- ЭТОТ МЕТОД БОЛЬШЕ НЕ НУЖЕН (логика переехала в GameBoardDrop) ---
+        // private void ElementDroppedOn(Element? targetElement)
+        // {
+        //    ...
+        // }
+        // -----------------------------------------------------------------
+
+        // --- ДОБАВЛЕНО: Логика для спавна из инвентаря ---
+        private void SpawnElementFromInventory(Element? element)
+        {
+            if (element == null) return;
+
+            // Спавн в случайной позиции в верхней части экрана
+            double x = _random.Next(50, 250);
+            double y = _random.Next(50, 200);
+
+            var newElement = new Element(element.Id, element.Name, element.ImagePath, new Rect(x, y, 75, 75));
+            GameBoardElements.Add(newElement);
+            Debug.WriteLine($"Spawned {newElement.Name} from inventory at {x},{y}");
+        }
+
+        // --- ДОБАВЛЕНО: Логика для дублирования ---
+        private void DuplicateElement(Element? element)
+        {
+            if (element == null) return;
+
+            // Создаем копию элемента немного со смещением
+            var newRect = new Rect(element.Bounds.X + 20, element.Bounds.Y + 20, element.Bounds.Width, element.Bounds.Height);
+            var newElement = new Element(element.Id, element.Name, element.ImagePath, newRect);
+
+            GameBoardElements.Add(newElement);
+            Debug.WriteLine($"Duplicated {newElement.Name} to {newRect}");
+        }
+        // ------------------------------------------
 
         private async void TryCombineElements(Element element1, Element element2)
         {
@@ -161,7 +188,6 @@ namespace AlchemyByKirill.ViewModels
             }
         }
 
-        // --- ЭТИ МЕТОДЫ ДОЛЖНЫ БЫТЬ ВНУТРИ КЛАССА ---
         [RelayCommand]
         void ClearBoard()
         {
@@ -174,5 +200,5 @@ namespace AlchemyByKirill.ViewModels
             await Shell.Current.GoToAsync("..");
         }
 
-    } // <--- ЭТО ПОСЛЕДНЯЯ СКОБКА КЛАССА
-} // <--- ЭТО ПОСЛЕДНЯЯ СКОБКА NAMESPACE
+    }
+}

@@ -1,26 +1,24 @@
-<?xml version="1.0" encoding="utf-8" ?>
+
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:AlchemyByKirill.ViewModels"
              xmlns:models="clr-namespace:AlchemyByKirill.Models"
              x:DataType="vm:GameViewModel"
              x:Class="AlchemyByKirill.Views.GamePage"
-             Title="Alchemy Game">
+             Title="Alchemy Game"
+             BackgroundColor="Black">
 
     <Grid RowDefinitions="*, Auto, Auto" Padding="10">
 
-        <Border Grid.Row="0" StrokeThickness="1" Stroke="Gray" Padding="5" Margin="0,0,0,10">
+        <Border Grid.Row="0" StrokeThickness="1" Stroke="DarkGray" Padding="5" Margin="0,0,0,10">
 
             <AbsoluteLayout x:Name="GameBoardLayout"
+                            BackgroundColor="Black"
                             BindableLayout.ItemsSource="{Binding GameBoardElements}">
 
                 <AbsoluteLayout.GestureRecognizers>
-                    <TapGestureRecognizer NumberOfTapsRequired="2"
-                                           Command="{Binding SpawnBaseElementsCommand}" />
-
                     <DropGestureRecognizer AllowDrop="True"
                                          DropCommand="{Binding GameBoardDropCommand}" />
-
                 </AbsoluteLayout.GestureRecognizers>
 
                 <BindableLayout.ItemTemplate>
@@ -29,7 +27,7 @@
                         <ContentView AbsoluteLayout.LayoutFlags="None"
                                      AbsoluteLayout.LayoutBounds="{Binding Bounds}">
 
-                            <Border Stroke="Green" StrokeThickness="2" BackgroundColor="LightGreen" Padding="2">
+                            <Border Stroke="#666666" StrokeThickness="2" BackgroundColor="#444444" Padding="2">
                                 <VerticalStackLayout Spacing="2">
                                     <Image Source="{Binding ImagePath}"
                                            HeightRequest="40"
@@ -37,6 +35,7 @@
                                            Aspect="AspectFit"
                                            HorizontalOptions="Center" />
                                     <Label Text="{Binding Name}"
+                                           TextColor="White"
                                            FontSize="10"
                                            HorizontalOptions="Center"
                                            HorizontalTextAlignment="Center"
@@ -45,12 +44,14 @@
                             </Border>
 
                             <ContentView.GestureRecognizers>
-                                <DragGestureRecognizer CanDrag="True"
-                                     DragStartingCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=ElementDragStartingCommand}" />
+                                <TapGestureRecognizer NumberOfTapsRequired="2"
+                                                      Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=DuplicateElementCommand}"
+                                                      CommandParameter="{Binding .}" />
 
-                                <DropGestureRecognizer AllowDrop="True"
-                                                     DropCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=ElementDroppedOnCommand}"
-                                                     DropCommandParameter="{Binding .}" />
+                                <DragGestureRecognizer CanDrag="True"
+                                     DragStartingCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=ElementDragStartingCommand}"
+                                     DragStartingCommandParameter="{Binding .}" />
+
                             </ContentView.GestureRecognizers>
 
                         </ContentView>
@@ -60,7 +61,7 @@
             </AbsoluteLayout>
         </Border>
 
-        <Border Grid.Row="1" StrokeThickness="1" Stroke="DarkGoldenrod" MinimumHeightRequest="150" Padding="5">
+        <Border Grid.Row="1" StrokeThickness="1" Stroke="Gray" BackgroundColor="#222222" MinimumHeightRequest="150" Padding="5">
             <ScrollView Orientation="Vertical">
                 <CollectionView ItemsSource="{Binding DiscoveredElements}" SelectionMode="None">
                     <CollectionView.ItemsLayout>
@@ -69,7 +70,12 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="models:Element">
                             <Grid Padding="5" WidthRequest="75" HeightRequest="75">
-                                <Border Stroke="LightGray" StrokeThickness="1" BackgroundColor="AliceBlue" Padding="2">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=SpawnElementFromInventoryCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                                <Border Stroke="#666666" StrokeThickness="1" BackgroundColor="#444444" Padding="2">
                                     <VerticalStackLayout Spacing="2">
                                         <Image Source="{Binding ImagePath}"
                                                HeightRequest="40"
@@ -77,6 +83,7 @@
                                                Aspect="AspectFit"
                                                HorizontalOptions="Center" />
                                         <Label Text="{Binding Name}"
+                                               TextColor="White"
                                                FontSize="10"
                                                HorizontalOptions="Center"
                                                HorizontalTextAlignment="Center"
@@ -102,6 +109,7 @@
         </HorizontalStackLayout>
 
         <Label Grid.Row="0" Text="{Binding PlayerScore, StringFormat='Счет: {0}'}"
+               TextColor="White"
                FontSize="Large"
                HorizontalOptions="End"
                VerticalOptions="Start"
