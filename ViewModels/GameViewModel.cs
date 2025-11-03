@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows.Input;
 using Element = AlchemyByKirill.Models.Element;
+using Microsoft.Maui.Controls;
 
 namespace AlchemyByKirill.ViewModels
 {
@@ -17,19 +18,18 @@ namespace AlchemyByKirill.ViewModels
         private Player _currentPlayer;
         private Random _random = new Random();
 
+        // --- ВОЗВРАЩАЕМ ЭТО СВОЙСТВО ДЛЯ КЭШИРОВАНИЯ ОБЪЕКТА ---
+        [ObservableProperty]
+        private Element? _draggedElement;
+
         public ObservableCollection<Element> DiscoveredElements { get; } = new ObservableCollection<Element>();
         public ObservableCollection<Element> GameBoardElements { get; } = new ObservableCollection<Element>();
 
         [ObservableProperty]
         private int _playerScore;
 
-        [ObservableProperty]
-        private Element? _draggedElement;
-
-        // Команды, которые будут вызваны из XAML
         public ICommand ElementDragStartingCommand { get; }
         public ICommand GameBoardDropCommand { get; }
-        // public ICommand ElementDroppedOnCommand { get; } // --- УДАЛЕНО ---
         public ICommand SpawnElementFromInventoryCommand { get; }
         public ICommand DuplicateElementCommand { get; }
 
@@ -39,10 +39,8 @@ namespace AlchemyByKirill.ViewModels
             _currentPlayer = new Player();
             LoadInitialGameState();
 
-            // Инициализация всех команд
             ElementDragStartingCommand = new RelayCommand<Element>(ElementDragStarting);
-            GameBoardDropCommand = new RelayCommand<DropEventArgs>(GameBoardDrop); // Этот метод теперь главный
-            // ElementDroppedOnCommand = new RelayCommand<Element>(ElementDroppedOn); // --- УДАЛЕНО ---
+            GameBoardDropCommand = new RelayCommand<DropEventArgs>(GameBoardDrop);
             SpawnElementFromInventoryCommand = new RelayCommand<Element>(SpawnElementFromInventory);
             DuplicateElementCommand = new RelayCommand<Element>(DuplicateElement);
         }
@@ -64,128 +62,132 @@ namespace AlchemyByKirill.ViewModels
             PlayerScore = _currentPlayer.Score;
         }
 
-        // Вызывается, когда мы НАЧИНАЕМ тащить элемент
+        // --- DragStarting: Кэшируем ССЫЛКУ НА ОБЪЕКТ ---
         private void ElementDragStarting(Element? element)
         {
             if (element == null) return;
+
+            // Кэшируем живую ссылку на объект
             DraggedElement = element;
-            Debug.WriteLine($"Dragging: {element.Name}");
+
+            Debug.WriteLine($"Drag STARTED: {element.Name} (InstanceId: {element.InstanceId})");
         }
 
-        // --- ЭТОТ МЕТОД ТЕПЕРЬ ОБРАБАТЫВАЕТ И ПЕРЕМЕЩЕНИЕ, И КОМБИНАЦИЮ ---
-        private void GameBoardDrop(DropEventArgs? e)
+        // --- Drop: Используем кэшированную ссылку ---
+        private async void GameBoardDrop(DropEventArgs? e)
         {
-            if (DraggedElement == null || e == null) return;
+            // Используем свойство _draggedElement
+            Element? draggedElement = this.DraggedElement;
 
-            var position = e.GetPosition(null); // Это 'Point?'
-            if (!position.HasValue)
+            if (draggedElement == null || e == null)
             {
-                DraggedElement = null;
+                // Если элемент потерян, просто выходим
+                Debug.WriteLine("Drop FAILED: Dragged element object is null.");
                 return;
             }
 
-            // 1. Проверяем, попали ли мы на другой элемент
-            // Ищем элемент, который не является перетаскиваемым, но его Bounds (рамки) содержит точку броска
+            var position = e.GetPosition(null);
+            if (!position.HasValue)
+            {
+                this.DraggedElement = null; // Очищаем кэш
+                return;
+            }
+
+            // Находим живую ссылку на доске (необходимо, чтобы убедиться, что мы работаем с объектом из ObservableCollection)
+            var liveDraggedElement = GameBoardElements.FirstOrDefault(el => el.InstanceId == draggedElement.InstanceId);
+
+            if (liveDraggedElement == null)
+            {
+                Debug.WriteLine("Drop FAILED: Live element instance not found on board.");
+                this.DraggedElement = null;
+                return;
+            }
+
+            Debug.WriteLine($"Drop RECEIVED for {liveDraggedElement.Name} at X={position.Value.X}, Y={position.Value.Y}");
+
+            // 1. Проверяем, попали ли мы на другой элемент (КОМБИНАЦИЯ)
             var targetElement = GameBoardElements.FirstOrDefault(el =>
-                el != DraggedElement &&
+                el.InstanceId != liveDraggedElement.InstanceId && // Нельзя комбинировать сам с собой
                 el.Bounds.Contains(position.Value));
 
             if (targetElement != null)
             {
-                // 2. ЕСЛИ ПОПАЛИ: Это комбинация
-                Debug.WriteLine($"Dropped {DraggedElement.Name} onto {targetElement.Name}");
-                TryCombineElements(DraggedElement, targetElement);
+                // Попытка комбинации
+                Element? result = _gameLogicService.Combine(liveDraggedElement, targetElement);
+
+                if (result != null)
+                {
+                    await HandleSuccessfulCombination(result, targetElement);
+                }
+                else
+                {
+                    // НЕУДАЧНАЯ КОМБИНАЦИЯ
+                    await Shell.Current.DisplayAlert("Алхимия", "new element coming soon, wait for update", "OK");
+                }
+
+                // Удаляем обе живые ссылки с доски
+                GameBoardElements.Remove(liveDraggedElement);
+                GameBoardElements.Remove(targetElement);
             }
             else
             {
-                // 3. ЕСЛИ НЕ ПОПАЛИ: Это перемещение
-                // Центрируем элемент по курсору (ширина/высота 75, значит смещение 37.5)
+                // 2. ПЕРЕМЕЩЕНИЕ
                 double x = Math.Max(0, position.Value.X - 37.5);
                 double y = Math.Max(0, position.Value.Y - 37.5);
 
-                DraggedElement.Bounds = new Rect(x, y, DraggedElement.Bounds.Width, DraggedElement.Bounds.Height);
-                Debug.WriteLine($"Moved {DraggedElement.Name} to {DraggedElement.Bounds}");
+                Debug.WriteLine($"Drop ACTION: Moving {liveDraggedElement.Name} to X={x}, Y={y}");
+
+                // Обновляем Bounds, что автоматически перемещает элемент на AbsoluteLayout
+                liveDraggedElement.Bounds = new Rect(x, y, liveDraggedElement.Bounds.Width, liveDraggedElement.Bounds.Height);
             }
 
-            DraggedElement = null; // Завершаем перетаскивание в любом случае
+            this.DraggedElement = null; // Очищаем кэш
         }
 
+        // --- Вспомогательные методы (для работы функций) ---
+        private async Task HandleSuccessfulCombination(Element result, Element targetElement)
+        {
+            Debug.WriteLine($"Успех! Получен: {result.Name} (ID: {result.Id})");
 
-        // --- ЭТОТ МЕТОД БОЛЬШЕ НЕ НУЖЕН (логика переехала в GameBoardDrop) ---
-        // private void ElementDroppedOn(Element? targetElement)
-        // {
-        //    ...
-        // }
-        // -----------------------------------------------------------------
+            result.Bounds = new Rect(targetElement.Bounds.X, targetElement.Bounds.Y, targetElement.Bounds.Width, targetElement.Bounds.Height);
+            GameBoardElements.Add(result);
 
-        // --- ДОБАВЛЕНО: Логика для спавна из инвентаря ---
+            bool isNew = _currentPlayer.DiscoverElement(result.Id);
+
+            if (isNew)
+            {
+                if (!DiscoveredElements.Any(e => e.Id == result.Id))
+                    DiscoveredElements.Add(result);
+
+                int scoreGained = _gameLogicService.CalculateScoreForDiscovery(result);
+                _currentPlayer.AddScore(scoreGained);
+                PlayerScore = _currentPlayer.Score;
+
+                await Shell.Current.DisplayAlert("Новый элемент!", $"Вы открыли: {result.Name}!", "OK");
+            }
+        }
+
         private void SpawnElementFromInventory(Element? element)
         {
             if (element == null) return;
 
-            // Спавн в случайной позиции в верхней части экрана
             double x = _random.Next(50, 250);
             double y = _random.Next(50, 200);
 
+            // Создаем НОВЫЙ элемент с новым InstanceId
             var newElement = new Element(element.Id, element.Name, element.ImagePath, new Rect(x, y, 75, 75));
             GameBoardElements.Add(newElement);
-            Debug.WriteLine($"Spawned {newElement.Name} from inventory at {x},{y}");
         }
 
-        // --- ДОБАВЛЕНО: Логика для дублирования ---
         private void DuplicateElement(Element? element)
         {
             if (element == null) return;
 
-            // Создаем копию элемента немного со смещением
             var newRect = new Rect(element.Bounds.X + 20, element.Bounds.Y + 20, element.Bounds.Width, element.Bounds.Height);
+            // Создаем НОВЫЙ элемент с новым InstanceId
             var newElement = new Element(element.Id, element.Name, element.ImagePath, newRect);
 
             GameBoardElements.Add(newElement);
-            Debug.WriteLine($"Duplicated {newElement.Name} to {newRect}");
-        }
-        // ------------------------------------------
-
-        private async void TryCombineElements(Element element1, Element element2)
-        {
-            Debug.WriteLine($"Попытка комбинации: {element1.Name} + {element2.Name}");
-            Element? result = _gameLogicService.Combine(element1, element2);
-
-            if (result != null)
-            {
-                Debug.WriteLine($"Успех! Получен: {result.Name}");
-
-                // Удаляем старые элементы с поля
-                GameBoardElements.Remove(element1);
-                GameBoardElements.Remove(element2);
-
-                // Ставим новый элемент на место 'цели' (element2)
-                result.Bounds = new Rect(element2.Bounds.X, element2.Bounds.Y, element2.Bounds.Width, element2.Bounds.Height);
-                GameBoardElements.Add(result);
-
-                bool isNew = _currentPlayer.DiscoverElement(result.Id);
-
-                if (isNew)
-                {
-                    Debug.WriteLine("Это новый элемент!");
-                    if (!DiscoveredElements.Any(e => e.Id == result.Id))
-                        DiscoveredElements.Add(result);
-
-                    int scoreGained = _gameLogicService.CalculateScoreForDiscovery(result);
-                    _currentPlayer.AddScore(scoreGained);
-                    PlayerScore = _currentPlayer.Score;
-
-                    await Shell.Current.DisplayAlert("Новый элемент!", $"Вы открыли: {result.Name}!", "OK");
-                }
-                else
-                {
-                    Debug.WriteLine("Элемент уже был открыт.");
-                }
-            }
-            else
-            {
-                Debug.WriteLine("Неудачная комбинация.");
-            }
         }
 
         [RelayCommand]
@@ -199,6 +201,5 @@ namespace AlchemyByKirill.ViewModels
         {
             await Shell.Current.GoToAsync("..");
         }
-
     }
 }
