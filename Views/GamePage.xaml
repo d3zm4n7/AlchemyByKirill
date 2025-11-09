@@ -66,49 +66,56 @@
         </Border>
 
         <!-- Инвентарь -->
-        <Border Grid.Row="1" StrokeThickness="1" Stroke="Gray" BackgroundColor="#222222" MinimumHeightRequest="150" Padding="5">
-            <ScrollView Orientation="Vertical">
-                <CollectionView ItemsSource="{Binding DiscoveredElements}" SelectionMode="None">
-                    <CollectionView.ItemsLayout>
-                        <GridItemsLayout Orientation="Vertical" Span="5" />
-                    </CollectionView.ItemsLayout>
+        <Border Grid.Row="1" StrokeThickness="1" Stroke="Gray" BackgroundColor="#222222" Padding="5" HeightRequest="160">
 
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="models:Element">
-                            <Grid Padding="5" WidthRequest="75" HeightRequest="75">
+            <CollectionView ItemsSource="{Binding DiscoveredElements}"
+                    SelectionMode="None"
+                    VerticalScrollBarVisibility="Always"
+                    HorizontalScrollBarVisibility="Never">
 
-                                <!-- Двойной тап из инвентаря → создать на поле (в VM) -->
-                                <Grid.GestureRecognizers>
-                                    <TapGestureRecognizer NumberOfTapsRequired="2"
-                                                          Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=SpawnElementFromInventoryCommand}"
-                                                          CommandParameter="{Binding .}"/>
-                                </Grid.GestureRecognizers>
+                <!-- Сетка — 5 колонок -->
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical" Span="5"/>
+                </CollectionView.ItemsLayout>
 
-                                <Border Stroke="Transparent" StrokeThickness="1" BackgroundColor="Transparent" Padding="2">
-                                    <VerticalStackLayout Spacing="2">
-                                        <Image Source="{Binding ImagePath}"
-                                               HeightRequest="40"
-                                               WidthRequest="40"
-                                               Aspect="AspectFit"
-                                               HorizontalOptions="Center" />
-                                        <Label Text="{Binding Name}"
-                                               TextColor="White"
-                                               FontSize="14"
-                                               HorizontalOptions="Center"
-                                               HorizontalTextAlignment="Center"
-                                               LineBreakMode="TailTruncation"/>
-                                    </VerticalStackLayout>
-                                </Border>
-                            </Grid>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Element">
+                        <Grid Padding="5" WidthRequest="75" HeightRequest="75">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer 
+                            NumberOfTapsRequired="2"
+                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=SpawnElementFromInventoryCommand}"
+                            CommandParameter="{Binding .}" />
+                            </Grid.GestureRecognizers>
 
-                </CollectionView>
-            </ScrollView>
+                            <Border Stroke="Transparent" StrokeThickness="1" BackgroundColor="Transparent" Padding="2">
+                                <VerticalStackLayout Spacing="2">
+                                    <Image Source="{Binding ImagePath}"
+                                   HeightRequest="40"
+                                   WidthRequest="40"
+                                   Aspect="AspectFit"
+                                   HorizontalOptions="Center" />
+                                    <Label Text="{Binding Name}"
+                                   TextColor="White"
+                                   FontSize="14"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center"
+                                   LineBreakMode="TailTruncation"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+            </CollectionView>
         </Border>
 
         <!-- Кнопки -->
         <HorizontalStackLayout Grid.Row="2" Spacing="10" HorizontalOptions="Center" Padding="0,10,0,10">
+            <Button Text="Библиотека"
+                    BackgroundColor="#3A3A3A"
+                    TextColor="White"
+                    Command="{Binding OpenLibraryCommand}" />       
             <Button Text="Очистить экран"
                     Command="{Binding ClearBoardCommand}"
                     BackgroundColor="OrangeRed"
@@ -117,6 +124,7 @@
                     Command="{Binding ExitCommand}"
                     BackgroundColor="Gray"
                     TextColor="White"/>
+            
         </HorizontalStackLayout>
 
         <!-- (опциональный счёт, если нужен поверх) -->

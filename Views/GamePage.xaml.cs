@@ -2,6 +2,8 @@
 using AlchemyByKirill.Services;
 using AlchemyByKirill.ViewModels; // Добавь using
 using ElementModel = AlchemyByKirill.Models.Element;
+using Microsoft.Maui.Controls;
+
 
 namespace AlchemyByKirill.Views;
 
@@ -13,6 +15,7 @@ public partial class GamePage : ContentPage
     {
         InitializeComponent();
         BindingContext = vm;
+        vm.LoadGame();
 
         vm.ShowMessage = async (msg) =>
         {

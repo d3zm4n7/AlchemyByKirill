@@ -1,6 +1,4 @@
-﻿// In ViewModels/GameViewModel.cs
-
-using AlchemyByKirill.Models;
+﻿using AlchemyByKirill.Models;
 using AlchemyByKirill.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,6 +7,10 @@ using System.Diagnostics;
 using System.Windows.Input;
 using Element = AlchemyByKirill.Models.Element;
 using Microsoft.Maui.Controls;
+using AlchemyByKirill.Views;
+using AlchemyByKirill.Helpers;
+using System.Text.Json;
+using Microsoft.Maui.Storage;
 
 namespace AlchemyByKirill.ViewModels
 {
@@ -17,6 +19,8 @@ namespace AlchemyByKirill.ViewModels
         private readonly GameLogicService _gameLogicService;
         private Player _currentPlayer;
         private Random _random = new Random();
+        private const string SaveKey_Discovered = "discovered_elements";
+        private const string SaveKey_Board = "board_elements";
         public Action<string>? ShowMessage;
 
         // --- ИСПРАВЛЕНИЕ: Мы удалили [ObservableProperty] ---
@@ -144,6 +148,54 @@ namespace AlchemyByKirill.ViewModels
                 await Shell.Current.DisplayAlert("Новый элемент!", $"Вы открыли: {result.Name}!", "OK");
             }
         }
+        public void SaveGame()
+        {
+            try
+            {
+                // Сохраняем инвентарь
+                var discoveredJson = JsonSerializer.Serialize(DiscoveredElements);
+                Preferences.Set(SaveKey_Discovered, discoveredJson);
+
+                // Сохраняем элементы на поле
+                var boardJson = JsonSerializer.Serialize(GameBoardElements);
+                Preferences.Set(SaveKey_Board, boardJson);
+            }
+
+            catch { /* ignore */ }
+        }
+
+        public void LoadGame()
+        {
+            try
+            {
+                // Инвентарь
+                if (Preferences.ContainsKey(SaveKey_Discovered))
+                {
+                    var json = Preferences.Get(SaveKey_Discovered, "");
+                    var list = JsonSerializer.Deserialize<ObservableCollection<Element>>(json);
+                    if (list != null)
+                    {
+                        DiscoveredElements.Clear();
+                        foreach (var e in list)
+                            DiscoveredElements.Add(e);
+                    }
+                }
+
+                // Поле
+                if (Preferences.ContainsKey(SaveKey_Board))
+                {
+                    var json = Preferences.Get(SaveKey_Board, "");
+                    var list = JsonSerializer.Deserialize<ObservableCollection<Element>>(json);
+                    if (list != null)
+                    {
+                        GameBoardElements.Clear();
+                        foreach (var e in list)
+                            GameBoardElements.Add(e);
+                    }
+                }
+            }
+            catch { /* ignore */ }
+        }
 
         private void SpawnElementFromInventory(Element? element)
         {
@@ -248,15 +300,24 @@ namespace AlchemyByKirill.ViewModels
 
 
         [RelayCommand]
-        void ClearBoard()
+        private void ClearBoard()
         {
             GameBoardElements.Clear();
+            SaveGame();
         }
 
         [RelayCommand]
-        async Task Exit()
+        private async Task Exit()
         {
+            SaveGame();
             await Shell.Current.GoToAsync("..");
+        }
+        [RelayCommand]
+        private async Task OpenLibrary()
+        {
+            var vm = ServiceHelper.GetService<LibraryViewModel>();
+            vm.Load(DiscoveredElements);
+            await Shell.Current.GoToAsync(nameof(LibraryPage));
         }
     }
 }

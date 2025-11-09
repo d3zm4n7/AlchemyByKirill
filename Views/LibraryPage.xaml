@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="AlchemyByKirill.Views.LibraryPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:AlchemyByKirill.ViewModels"
+    xmlns:models="clr-namespace:AlchemyByKirill.Models"
+    x:DataType="vm:LibraryViewModel"
+    BackgroundColor="Black"
+    Title="Библиотека элементов">
+
+    <Grid Padding="10" RowDefinitions="Auto,*">
+
+        <Label Text="Библиотека элементов"
+               FontAttributes="Bold"
+               HorizontalOptions="Center"
+               FontSize="24"
+               TextColor="White"
+               Margin="0,0,0,10"/>
+
+        <CollectionView Grid.Row="1"
+                        ItemsSource="{Binding Elements}"
+                        SelectionMode="None">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="4"/>
+            </CollectionView.ItemsLayout>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:Element">
+                    <VerticalStackLayout Padding="6" Spacing="4" HorizontalOptions="Center">
+                        <Image Source="{Binding ImagePath}" WidthRequest="50" HeightRequest="50"/>
+                        <Label Text="{Binding Name}"
+                               TextColor="White"
+                               FontSize="12"
+                               HorizontalTextAlignment="Center"/>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+        </CollectionView>
+
+    </Grid>
+</ContentPage>

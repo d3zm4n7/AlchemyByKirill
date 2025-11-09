@@ -11,5 +11,6 @@ public partial class AppShell : Shell
         // Регистрируем пути для навигации
         Routing.RegisterRoute(nameof(StartPage), typeof(StartPage));
         Routing.RegisterRoute(nameof(GamePage), typeof(GamePage));
+        Routing.RegisterRoute(nameof(LibraryPage), typeof(LibraryPage));
     }
 }

@@ -25,6 +25,8 @@ namespace AlchemyByKirill
             // --- Регистрация ViewModel и Страницы ---
             builder.Services.AddSingleton<GameViewModel>(); // Регистрируем ViewModel как Singleton (один экземпляр на все приложение)
             builder.Services.AddSingleton<GamePage>();      // Регистрируем страницу GamePage
+            builder.Services.AddSingleton<LibraryViewModel>();
+            builder.Services.AddSingleton<LibraryPage>();
 
             // Позже добавим StartViewModel и StartPage
             // builder.Services.AddSingleton<StartViewModel>();
