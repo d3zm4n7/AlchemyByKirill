@@ -18,8 +18,8 @@ namespace AlchemyByKirill.ViewModels
         private Player _currentPlayer;
         private Random _random = new Random();
 
-        // --- ВОЗВРАЩАЕМ ЭТО СВОЙСТВО ДЛЯ КЭШИРОВАНИЯ ОБЪЕКТА ---
-        [ObservableProperty]
+        // --- ИСПРАВЛЕНИЕ: Мы удалили [ObservableProperty] ---
+        // Это приватное поле, которое не должно обнуляться
         private Element? _draggedElement;
 
         public ObservableCollection<Element> DiscoveredElements { get; } = new ObservableCollection<Element>();
@@ -62,22 +62,22 @@ namespace AlchemyByKirill.ViewModels
             PlayerScore = _currentPlayer.Score;
         }
 
-        // --- DragStarting: Кэшируем ССЫЛКУ НА ОБЪЕКТ ---
+        // --- DragStarting: Кэшируем ССЫЛКУ НА ОБЪЕКТ в приватное поле ---
         private void ElementDragStarting(Element? element)
         {
             if (element == null) return;
 
-            // Кэшируем живую ссылку на объект
-            DraggedElement = element;
+            // ИСПРАВЛЕНИЕ: Используем приватное поле _draggedElement
+            _draggedElement = element;
 
             Debug.WriteLine($"Drag STARTED: {element.Name} (InstanceId: {element.InstanceId})");
         }
 
-        // --- Drop: Используем кэшированную ссылку ---
+        // --- Drop: Используем кэшированную ссылку из приватного поля ---
         private async void GameBoardDrop(DropEventArgs? e)
         {
-            // Используем свойство _draggedElement
-            Element? draggedElement = this.DraggedElement;
+            // ИСПРАВЛЕНИЕ: Читаем из приватного поля _draggedElement
+            Element? draggedElement = _draggedElement;
 
             if (draggedElement == null || e == null)
             {
@@ -89,17 +89,17 @@ namespace AlchemyByKirill.ViewModels
             var position = e.GetPosition(null);
             if (!position.HasValue)
             {
-                this.DraggedElement = null; // Очищаем кэш
+                _draggedElement = null; // Очищаем кэш
                 return;
             }
 
-            // Находим живую ссылку на доске (необходимо, чтобы убедиться, что мы работаем с объектом из ObservableCollection)
+            // Находим живую ссылку на доске
             var liveDraggedElement = GameBoardElements.FirstOrDefault(el => el.InstanceId == draggedElement.InstanceId);
 
             if (liveDraggedElement == null)
             {
                 Debug.WriteLine("Drop FAILED: Live element instance not found on board.");
-                this.DraggedElement = null;
+                _draggedElement = null;
                 return;
             }
 
@@ -107,7 +107,7 @@ namespace AlchemyByKirill.ViewModels
 
             // 1. Проверяем, попали ли мы на другой элемент (КОМБИНАЦИЯ)
             var targetElement = GameBoardElements.FirstOrDefault(el =>
-                el.InstanceId != liveDraggedElement.InstanceId && // Нельзя комбинировать сам с собой
+                el.InstanceId != liveDraggedElement.InstanceId &&
                 el.Bounds.Contains(position.Value));
 
             if (targetElement != null)
@@ -137,11 +137,11 @@ namespace AlchemyByKirill.ViewModels
 
                 Debug.WriteLine($"Drop ACTION: Moving {liveDraggedElement.Name} to X={x}, Y={y}");
 
-                // Обновляем Bounds, что автоматически перемещает элемент на AbsoluteLayout
                 liveDraggedElement.Bounds = new Rect(x, y, liveDraggedElement.Bounds.Width, liveDraggedElement.Bounds.Height);
             }
 
-            this.DraggedElement = null; // Очищаем кэш
+            // ИСПРАВЛЕНИЕ: Очищаем приватное поле
+            _draggedElement = null; // Очищаем кэш
         }
 
         // --- Вспомогательные методы (для работы функций) ---
@@ -170,11 +170,8 @@ namespace AlchemyByKirill.ViewModels
         private void SpawnElementFromInventory(Element? element)
         {
             if (element == null) return;
-
             double x = _random.Next(50, 250);
             double y = _random.Next(50, 200);
-
-            // Создаем НОВЫЙ элемент с новым InstanceId
             var newElement = new Element(element.Id, element.Name, element.ImagePath, new Rect(x, y, 75, 75));
             GameBoardElements.Add(newElement);
         }
@@ -182,11 +179,8 @@ namespace AlchemyByKirill.ViewModels
         private void DuplicateElement(Element? element)
         {
             if (element == null) return;
-
             var newRect = new Rect(element.Bounds.X + 20, element.Bounds.Y + 20, element.Bounds.Width, element.Bounds.Height);
-            // Создаем НОВЫЙ элемент с новым InstanceId
             var newElement = new Element(element.Id, element.Name, element.ImagePath, newRect);
-
             GameBoardElements.Add(newElement);
         }
 
