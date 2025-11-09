@@ -1,14 +1,56 @@
-// In Views/GamePage.xaml.cs
-using AlchemyByKirill.ViewModels; // Добавь using
+п»ї// In Views/GamePage.xaml.cs
+using AlchemyByKirill.Services;
+using AlchemyByKirill.ViewModels; // Р”РѕР±Р°РІСЊ using
+using ElementModel = AlchemyByKirill.Models.Element;
 
 namespace AlchemyByKirill.Views;
 
 public partial class GamePage : ContentPage
 {
-    // Внедряем ViewModel через конструктор
-    public GamePage(GameViewModel viewModel)
+    private GameViewModel VM => (GameViewModel)BindingContext;
+
+    public GamePage(GameViewModel vm)
     {
         InitializeComponent();
-        BindingContext = viewModel; // Устанавливаем ViewModel как контекст данных для XAML
+        BindingContext = vm;
+
+        vm.ShowMessage = async (msg) =>
+        {
+            await DisplayAlert("РђР»С…РёРјРёСЏ", msg, "OK");
+        };
     }
+
+    private void OnDragStarting(object sender, DragStartingEventArgs e)
+    {
+        if (sender is BindableObject bo && bo.BindingContext is Element element)
+            VM.ElementDragStartingCommand.Execute(element);
+    }
+
+    private void OnDrop(object sender, DropEventArgs e)
+    {
+        var position = e.GetPosition(GameBoardLayout);
+        if (position.HasValue)
+            VM.DropAt(position.Value);
+    }
+
+    private void OnBoardDoubleTapped(object sender, TappedEventArgs e)
+    {
+        if (sender is BindableObject bo && bo.BindingContext is Element element)
+            VM.DuplicateElementCommand.Execute(element);
+    }
+
+    private void OnInventoryDoubleTapped(object sender, TappedEventArgs e)
+    {
+        if (sender is BindableObject bo && bo.BindingContext is Element element)
+            VM.SpawnElementFromInventoryCommand.Execute(element);
+    }
+
+
 }
+
+
+
+
+
+
+

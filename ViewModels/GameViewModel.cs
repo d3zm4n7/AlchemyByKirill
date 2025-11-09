@@ -17,6 +17,7 @@ namespace AlchemyByKirill.ViewModels
         private readonly GameLogicService _gameLogicService;
         private Player _currentPlayer;
         private Random _random = new Random();
+        public Action<string>? ShowMessage;
 
         // --- ИСПРАВЛЕНИЕ: Мы удалили [ObservableProperty] ---
         // Это приватное поле, которое не должно обнуляться
@@ -40,7 +41,7 @@ namespace AlchemyByKirill.ViewModels
             LoadInitialGameState();
 
             ElementDragStartingCommand = new RelayCommand<Element>(ElementDragStarting);
-            GameBoardDropCommand = new RelayCommand<DropEventArgs>(GameBoardDrop);
+            GameBoardDropCommand = new RelayCommand<(DropEventArgs, AbsoluteLayout)>(GameBoardDrop);
             SpawnElementFromInventoryCommand = new RelayCommand<Element>(SpawnElementFromInventory);
             DuplicateElementCommand = new RelayCommand<Element>(DuplicateElement);
         }
@@ -74,75 +75,52 @@ namespace AlchemyByKirill.ViewModels
         }
 
         // --- Drop: Используем кэшированную ссылку из приватного поля ---
-        private async void GameBoardDrop(DropEventArgs? e)
+        private async void GameBoardDrop((DropEventArgs e, AbsoluteLayout layout) args)
         {
-            // ИСПРАВЛЕНИЕ: Читаем из приватного поля _draggedElement
-            Element? draggedElement = _draggedElement;
+            var e = args.e;
+            var layout = args.layout;
 
-            if (draggedElement == null || e == null)
-            {
-                // Если элемент потерян, просто выходим
-                Debug.WriteLine("Drop FAILED: Dragged element object is null.");
+            if (_draggedElement == null)
                 return;
-            }
 
-            var position = e.GetPosition(null);
+            var position = e.GetPosition(layout);
             if (!position.HasValue)
-            {
-                _draggedElement = null; // Очищаем кэш
                 return;
-            }
 
-            // Находим живую ссылку на доске
-            var liveDraggedElement = GameBoardElements.FirstOrDefault(el => el.InstanceId == draggedElement.InstanceId);
-
-            if (liveDraggedElement == null)
-            {
-                Debug.WriteLine("Drop FAILED: Live element instance not found on board.");
-                _draggedElement = null;
+            var live = GameBoardElements.FirstOrDefault(el => el.InstanceId == _draggedElement.InstanceId);
+            if (live == null)
                 return;
-            }
 
-            Debug.WriteLine($"Drop RECEIVED for {liveDraggedElement.Name} at X={position.Value.X}, Y={position.Value.Y}");
-
-            // 1. Проверяем, попали ли мы на другой элемент (КОМБИНАЦИЯ)
-            var targetElement = GameBoardElements.FirstOrDefault(el =>
-                el.InstanceId != liveDraggedElement.InstanceId &&
+            // Проверка на комбинацию
+            var target = GameBoardElements.FirstOrDefault(el =>
+                el.InstanceId != live.InstanceId &&
                 el.Bounds.Contains(position.Value));
 
-            if (targetElement != null)
+            if (target != null)
             {
-                // Попытка комбинации
-                Element? result = _gameLogicService.Combine(liveDraggedElement, targetElement);
+                var result = _gameLogicService.Combine(live, target);
+
+                GameBoardElements.Remove(live);
+                GameBoardElements.Remove(target);
 
                 if (result != null)
                 {
-                    await HandleSuccessfulCombination(result, targetElement);
+                    await HandleSuccessfulCombination(result, target);
                 }
-                else
-                {
-                    // НЕУДАЧНАЯ КОМБИНАЦИЯ
-                    await Shell.Current.DisplayAlert("Алхимия", "new element coming soon, wait for update", "OK");
-                }
-
-                // Удаляем обе живые ссылки с доски
-                GameBoardElements.Remove(liveDraggedElement);
-                GameBoardElements.Remove(targetElement);
-            }
-            else
-            {
-                // 2. ПЕРЕМЕЩЕНИЕ
-                double x = Math.Max(0, position.Value.X - 37.5);
-                double y = Math.Max(0, position.Value.Y - 37.5);
-
-                Debug.WriteLine($"Drop ACTION: Moving {liveDraggedElement.Name} to X={x}, Y={y}");
-
-                liveDraggedElement.Bounds = new Rect(x, y, liveDraggedElement.Bounds.Width, liveDraggedElement.Bounds.Height);
+                return;
             }
 
-            // ИСПРАВЛЕНИЕ: Очищаем приватное поле
-            _draggedElement = null; // Очищаем кэш
+            // ✅ Перемещение (исправлено!)
+            live.Bounds = new Rect(
+                position.Value.X - live.Bounds.Width / 2,
+                position.Value.Y - live.Bounds.Height / 2,
+                live.Bounds.Width,
+                live.Bounds.Height
+            );
+
+            _draggedElement = null;
         }
+
 
         // --- Вспомогательные методы (для работы функций) ---
         private async Task HandleSuccessfulCombination(Element result, Element targetElement)
@@ -183,6 +161,91 @@ namespace AlchemyByKirill.ViewModels
             var newElement = new Element(element.Id, element.Name, element.ImagePath, newRect);
             GameBoardElements.Add(newElement);
         }
+
+        public void OnDrop(Point point)
+        {
+            if (_draggedElement == null)
+                return;
+
+            var live = GameBoardElements.FirstOrDefault(el => el.InstanceId == _draggedElement.InstanceId);
+            if (live == null)
+                return;
+
+            live.Bounds = new Rect(
+                point.X - live.Bounds.Width / 2,
+                point.Y - live.Bounds.Height / 2,
+                live.Bounds.Width,
+                live.Bounds.Height
+            );
+
+            _draggedElement = null;
+        }
+
+        public void DropAt(Point point)
+        {
+            if (_draggedElement == null)
+                return;
+
+            var live = GameBoardElements.FirstOrDefault(el => el.InstanceId == _draggedElement.InstanceId);
+            if (live == null)
+            {
+                _draggedElement = null;
+                return;
+            }
+
+            // Проверка на комбинацию — попали на другой элемент?
+            var target = GameBoardElements.FirstOrDefault(el =>
+                el.InstanceId != live.InstanceId &&
+                el.Bounds.Contains(point));
+
+            if (target != null)
+            {
+                // Пробуем создать новый элемент
+                var result = _gameLogicService.Combine(live, target);
+
+                if (result == null)
+                {
+                    // ❗ Комбинации нет → элементы НЕ удаляем
+                    ShowMessage?.Invoke("Комбинация пока в разработке ✨");
+                    _draggedElement = null;
+                    return;
+                }
+
+                // ✅ Комбинация есть → создаём новый элемент
+                GameBoardElements.Remove(live);
+                GameBoardElements.Remove(target);
+
+                // Новый элемент появляется на месте второго (как в алхимии Little Alchemy)
+                result.Bounds = new Rect(target.Bounds.X, target.Bounds.Y, target.Bounds.Width, target.Bounds.Height);
+                GameBoardElements.Add(result);
+
+                bool isNew = _currentPlayer.DiscoverElement(result.Id);
+                if (isNew)
+                {
+                    if (!DiscoveredElements.Any(e => e.Id == result.Id))
+                        DiscoveredElements.Add(result);
+
+                    int scoreGained = _gameLogicService.CalculateScoreForDiscovery(result);
+                    _currentPlayer.AddScore(scoreGained);
+                    PlayerScore = _currentPlayer.Score;
+                }
+
+                _draggedElement = null;
+                return;
+            }
+
+            // Если не попали ни в какой элемент → просто перемещаем
+            live.Bounds = new Rect(
+                point.X - live.Bounds.Width / 2,
+                point.Y - live.Bounds.Height / 2,
+                live.Bounds.Width,
+                live.Bounds.Height
+            );
+
+            _draggedElement = null;
+        }
+
+
 
         [RelayCommand]
         void ClearBoard()

@@ -10,31 +10,45 @@
 
     <Grid RowDefinitions="*, Auto, Auto" Padding="10">
 
+        <!-- Рабочее поле -->
         <Border Grid.Row="0" StrokeThickness="1" Stroke="DarkGray" Padding="5" Margin="0,0,0,10">
-
             <AbsoluteLayout x:Name="GameBoardLayout"
                             BackgroundColor="Black"
                             BindableLayout.ItemsSource="{Binding GameBoardElements}">
 
+                <!-- Drop обрабатываем событием (чтобы координаты были относительно GameBoardLayout) -->
                 <AbsoluteLayout.GestureRecognizers>
-                    <DropGestureRecognizer AllowDrop="True"
-                                         DropCommand="{Binding GameBoardDropCommand}" />
+                    <DropGestureRecognizer AllowDrop="True" Drop="OnDrop"/>
                 </AbsoluteLayout.GestureRecognizers>
 
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="models:Element">
-
                         <ContentView AbsoluteLayout.LayoutFlags="None"
                                      AbsoluteLayout.LayoutBounds="{Binding Bounds}"
                                      BindingContext="{Binding .}">
 
                             <Border Stroke="Transparent" StrokeThickness="2" BackgroundColor="Transparent" Padding="2">
                                 <VerticalStackLayout Spacing="2">
+                                    <!-- ⬇️ ЖЕСТЫ ПОВЕСИЛИ НА САМО IMAGE, КОМАНДЫ С ПАРАМЕТРОМ -->
                                     <Image Source="{Binding ImagePath}"
                                            HeightRequest="40"
                                            WidthRequest="40"
                                            Aspect="AspectFit"
-                                           HorizontalOptions="Center" />
+                                           HorizontalOptions="Center">
+                                        <Image.GestureRecognizers>
+
+                                            <!-- Двойной тап на поле → дублировать (в VM) -->
+                                            <TapGestureRecognizer NumberOfTapsRequired="2"
+                                                                  Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=DuplicateElementCommand}"
+                                                                  CommandParameter="{Binding .}"/>
+
+                                            <!-- Drag start через команду (в VM) -->
+                                            <DragGestureRecognizer CanDrag="True"
+                                                                   DragStartingCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=ElementDragStartingCommand}"
+                                                                   DragStartingCommandParameter="{Binding .}"/>
+                                        </Image.GestureRecognizers>
+                                    </Image>
+
                                     <Label Text="{Binding Name}"
                                            TextColor="White"
                                            FontSize="14"
@@ -44,16 +58,6 @@
                                 </VerticalStackLayout>
                             </Border>
 
-                            <ContentView.GestureRecognizers>
-                                <TapGestureRecognizer NumberOfTapsRequired="2"
-                                                      Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=DuplicateElementCommand}"
-                                                      CommandParameter="{Binding .}" />
-
-                                <DragGestureRecognizer CanDrag="True"
-                                     DragStartingCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=ElementDragStartingCommand}" />
-
-                            </ContentView.GestureRecognizers>
-
                         </ContentView>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
@@ -61,20 +65,25 @@
             </AbsoluteLayout>
         </Border>
 
+        <!-- Инвентарь -->
         <Border Grid.Row="1" StrokeThickness="1" Stroke="Gray" BackgroundColor="#222222" MinimumHeightRequest="150" Padding="5">
             <ScrollView Orientation="Vertical">
                 <CollectionView ItemsSource="{Binding DiscoveredElements}" SelectionMode="None">
                     <CollectionView.ItemsLayout>
                         <GridItemsLayout Orientation="Vertical" Span="5" />
                     </CollectionView.ItemsLayout>
+
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="models:Element">
                             <Grid Padding="5" WidthRequest="75" HeightRequest="75">
+
+                                <!-- Двойной тап из инвентаря → создать на поле (в VM) -->
                                 <Grid.GestureRecognizers>
-                                    <TapGestureRecognizer 
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=SpawnElementFromInventoryCommand}"
-                                        CommandParameter="{Binding .}" />
+                                    <TapGestureRecognizer NumberOfTapsRequired="2"
+                                                          Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GameViewModel}}, Path=SpawnElementFromInventoryCommand}"
+                                                          CommandParameter="{Binding .}"/>
                                 </Grid.GestureRecognizers>
+
                                 <Border Stroke="Transparent" StrokeThickness="1" BackgroundColor="Transparent" Padding="2">
                                     <VerticalStackLayout Spacing="2">
                                         <Image Source="{Binding ImagePath}"
@@ -93,27 +102,30 @@
                             </Grid>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
+
                 </CollectionView>
             </ScrollView>
         </Border>
 
+        <!-- Кнопки -->
         <HorizontalStackLayout Grid.Row="2" Spacing="10" HorizontalOptions="Center" Padding="0,10,0,10">
-            <Button Text="Очистить экран" 
-                    Command="{Binding ClearBoardCommand}" 
+            <Button Text="Очистить экран"
+                    Command="{Binding ClearBoardCommand}"
                     BackgroundColor="OrangeRed"
                     TextColor="White"/>
-            <Button Text="Выйти в меню" 
+            <Button Text="Выйти в меню"
                     Command="{Binding ExitCommand}"
                     BackgroundColor="Gray"
                     TextColor="White"/>
         </HorizontalStackLayout>
 
-        <Label Grid.Row="0" Text="{Binding PlayerScore, StringFormat='Счет: {0}'}"
+        <!-- (опциональный счёт, если нужен поверх) -->
+        <!--<Label Grid.Row="0" Text="{Binding PlayerScore, StringFormat='Счет: {0}'}"
                TextColor="White"
                FontSize="Large"
                HorizontalOptions="End"
                VerticalOptions="Start"
-               Margin="0,5,5,0" />
+               Margin="0,5,5,0" />-->
 
     </Grid>
 </ContentPage>
