@@ -10,6 +10,7 @@ using Microsoft.Maui.Controls;
 using AlchemyByKirill.Views;
 using AlchemyByKirill.Helpers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Maui.Storage;
 
 namespace AlchemyByKirill.ViewModels
@@ -48,6 +49,8 @@ namespace AlchemyByKirill.ViewModels
             GameBoardDropCommand = new RelayCommand<(DropEventArgs, AbsoluteLayout)>(GameBoardDrop);
             SpawnElementFromInventoryCommand = new RelayCommand<Element>(SpawnElementFromInventory);
             DuplicateElementCommand = new RelayCommand<Element>(DuplicateElement);
+            DiscoveredElements.CollectionChanged += (_, __) => SaveGame();
+            GameBoardElements.CollectionChanged += (_, __) => SaveGame();
         }
 
         private void LoadInitialGameState()
@@ -150,51 +153,36 @@ namespace AlchemyByKirill.ViewModels
         }
         public void SaveGame()
         {
-            try
-            {
-                // Сохраняем инвентарь
-                var discoveredJson = JsonSerializer.Serialize(DiscoveredElements);
-                Preferences.Set(SaveKey_Discovered, discoveredJson);
+            var discoveredJson = JsonSerializer.Serialize(DiscoveredElements);
+            Preferences.Set("discovered", discoveredJson);
 
-                // Сохраняем элементы на поле
-                var boardJson = JsonSerializer.Serialize(GameBoardElements);
-                Preferences.Set(SaveKey_Board, boardJson);
-            }
-
-            catch { /* ignore */ }
+            var boardJson = JsonSerializer.Serialize(GameBoardElements);
+            Preferences.Set("board", boardJson);
         }
 
         public void LoadGame()
         {
-            try
+            if (Preferences.ContainsKey("discovered"))
             {
-                // Инвентарь
-                if (Preferences.ContainsKey(SaveKey_Discovered))
+                var json = Preferences.Get("discovered", "");
+                var list = JsonSerializer.Deserialize<ObservableCollection<Element>>(json);
+                if (list != null)
                 {
-                    var json = Preferences.Get(SaveKey_Discovered, "");
-                    var list = JsonSerializer.Deserialize<ObservableCollection<Element>>(json);
-                    if (list != null)
-                    {
-                        DiscoveredElements.Clear();
-                        foreach (var e in list)
-                            DiscoveredElements.Add(e);
-                    }
-                }
-
-                // Поле
-                if (Preferences.ContainsKey(SaveKey_Board))
-                {
-                    var json = Preferences.Get(SaveKey_Board, "");
-                    var list = JsonSerializer.Deserialize<ObservableCollection<Element>>(json);
-                    if (list != null)
-                    {
-                        GameBoardElements.Clear();
-                        foreach (var e in list)
-                            GameBoardElements.Add(e);
-                    }
+                    DiscoveredElements.Clear();
+                    foreach (var e in list) DiscoveredElements.Add(e);
                 }
             }
-            catch { /* ignore */ }
+
+            if (Preferences.ContainsKey("board"))
+            {
+                var json = Preferences.Get("board", "");
+                var list = JsonSerializer.Deserialize<ObservableCollection<Element>>(json);
+                if (list != null)
+                {
+                    GameBoardElements.Clear();
+                    foreach (var e in list) GameBoardElements.Add(e);
+                }
+            }
         }
 
         private void SpawnElementFromInventory(Element? element)
