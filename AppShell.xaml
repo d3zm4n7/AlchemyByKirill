@@ -7,8 +7,8 @@
     Title="AlchemyByKirill">
 
     <ShellContent
-        Title="Game"
-        ContentTemplate="{DataTemplate local:GamePage}"
+        Title="Main Menu"
+        ContentTemplate="{DataTemplate local:StartPage}"
         Route="StartPage" />
 
 </Shell>

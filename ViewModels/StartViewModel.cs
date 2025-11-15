@@ -10,11 +10,19 @@ namespace AlchemyByKirill.ViewModels
         {
         }
 
-        // Команда для перехода на страницу игры
         [RelayCommand]
         async Task GoToGame()
         {
             await Shell.Current.GoToAsync(nameof(GamePage));
+        }
+
+        // --- ДОБАВЬТЕ ЭТУ КОМАНДУ ---
+        [RelayCommand]
+        async Task GoToLibrary()
+        {
+            // Эта навигация сработает, так как LibraryPage
+            // уже зарегистрирована в AppShell.xaml.cs
+            await Shell.Current.GoToAsync(nameof(LibraryPage));
         }
     }
 }

@@ -6,25 +6,37 @@
              x:Class="AlchemyByKirill.Views.StartPage"
              Title="StartPage">
 
-    <ContentPage.BindingContext>
-        <vm:StartViewModel />
-    </ContentPage.BindingContext>
+    <Grid>
+        <Image 
+            Source="splash.png"
+            Aspect="AspectFill"
+            Opacity="0.8" />
 
-    <VerticalStackLayout 
-        Spacing="25" 
-        Padding="30,0" 
-        VerticalOptions="Center">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <Label 
-            Text="Alchemy By Kirill"
-            SemanticProperties.HeadingLevel="Level1"
-            FontSize="32"
-            HorizontalOptions="Center" />
+            <VerticalStackLayout
+                Grid.Row="1"
+                Spacing="10"
+                Padding="30, 20">
+                <Button 
+                    Text="Начать игру"
+                    Command="{Binding GoToGameCommand}"
+                    HorizontalOptions="Fill" />
+                <Button 
+                    Text="Library"
+                    Command="{Binding GoToLibraryCommand}"
+                    HorizontalOptions="Fill" />
+                <Button 
+                    Text="Exit"
+                    Command="{Binding GoToLibraryCommand}"
+                    HorizontalOptions="Fill" />
+            </VerticalStackLayout>
 
-        <Button 
-            Text="Начать игру"
-            Command="{Binding GoToGameCommand}"
-            HorizontalOptions="Center" />
+        </Grid>
+    </Grid>
 
-    </VerticalStackLayout>
 </ContentPage>

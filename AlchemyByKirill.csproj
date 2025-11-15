@@ -43,10 +43,11 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\appicon.png"/>
 
 		<!-- Splash Screen -->
-
+		<MauiSplashScreen Include="Resources\Splash\splash.png" Resize="True" /> <MauiImage Include="Resources\Images\**\*" />
+		<MauiImage Include="Resources\Splash\splash.png" /> 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\**\*" />
 		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
@@ -60,12 +61,19 @@
 
 	<ItemGroup>
 	  <AndroidResource Remove="Resources\Images\recipe_emojis_pack_72x72\**" />
+	  <AndroidResource Remove="Resources\Images\recipe_emojis_pack_svg_color\**" />
 	  <Compile Remove="Resources\Images\recipe_emojis_pack_72x72\**" />
+	  <Compile Remove="Resources\Images\recipe_emojis_pack_svg_color\**" />
 	  <EmbeddedResource Remove="Resources\Images\recipe_emojis_pack_72x72\**" />
+	  <EmbeddedResource Remove="Resources\Images\recipe_emojis_pack_svg_color\**" />
 	  <MauiCss Remove="Resources\Images\recipe_emojis_pack_72x72\**" />
+	  <MauiCss Remove="Resources\Images\recipe_emojis_pack_svg_color\**" />
 	  <MauiImage Remove="Resources\Images\recipe_emojis_pack_72x72\**" />
+	  <MauiImage Remove="Resources\Images\recipe_emojis_pack_svg_color\**" />
 	  <MauiXaml Remove="Resources\Images\recipe_emojis_pack_72x72\**" />
+	  <MauiXaml Remove="Resources\Images\recipe_emojis_pack_svg_color\**" />
 	  <None Remove="Resources\Images\recipe_emojis_pack_72x72\**" />
+	  <None Remove="Resources\Images\recipe_emojis_pack_svg_color\**" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -84,6 +92,7 @@
 	  <Folder Include="bin\Debug\net9.0-maccatalyst\maccatalyst-x64\" />
 	  <Folder Include="bin\Debug\net9.0-windows10.0.19041.0\win10-x64\" />
 	  <Folder Include="Controls\" />
+	  <Folder Include="Resources\Images\" />
 	</ItemGroup>
 
 	<ItemGroup>

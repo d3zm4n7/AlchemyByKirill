@@ -29,8 +29,8 @@ namespace AlchemyByKirill
             builder.Services.AddSingleton<LibraryPage>();
 
             // Позже добавим StartViewModel и StartPage
-            // builder.Services.AddSingleton<StartViewModel>();
-            // builder.Services.AddTransient<StartPage>(); // Страницы обычно Transient
+            builder.Services.AddSingleton<StartViewModel>();
+            builder.Services.AddTransient<StartPage>(); // Страницы обычно Transient
 
             return builder.Build();
         }
