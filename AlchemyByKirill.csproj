@@ -43,11 +43,12 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.png"/>
+		<MauiIcon Include="Resources\AppIcon\appicon.png" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.png" Resize="True" /> <MauiImage Include="Resources\Images\**\*" />
-		<MauiImage Include="Resources\Splash\splash.png" /> 
+		<MauiSplashScreen Include="Resources\Splash\splash.png" /> 
+		<MauiImage Include="Resources\Images\**\*" />
+		<MauiImage Include="Resources\Splash\splash2.png" /> 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\**\*" />
 		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
@@ -74,6 +75,10 @@
 	  <MauiXaml Remove="Resources\Images\recipe_emojis_pack_svg_color\**" />
 	  <None Remove="Resources\Images\recipe_emojis_pack_72x72\**" />
 	  <None Remove="Resources\Images\recipe_emojis_pack_svg_color\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <AndroidResource Remove="Platforms\Android\Resources\mipmap-anydpi-v26\maui_splash.xml" />
 	</ItemGroup>
 
 	<ItemGroup>
